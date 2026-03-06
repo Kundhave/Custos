@@ -1,0 +1,16 @@
+{
+    "navigationFallback": {
+        "rewrite": "/index.html",
+        "exclude": [
+            "/static/**",
+            "/*.ico",
+            "/*.png",
+            "/*.json",
+            "/*.txt"
+        ]
+    },
+    "globalHeaders": {
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY"
+    }
+}
