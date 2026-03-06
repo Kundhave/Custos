@@ -285,7 +285,7 @@ function Module1Tab() {
         setLoading(false);
     }, []);
 
-    useEffect(() => { fetchLogs(); }, []);
+    useEffect(() => { fetchLogs(); }, [fetchLogs]);
 
     const approved = logs.filter(l => !l.is_flagged).length;
     const flagged = logs.filter(l => l.is_flagged).length;
