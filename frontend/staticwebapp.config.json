@@ -2,7 +2,7 @@
     "navigationFallback": {
         "rewrite": "/index.html",
         "exclude": [
-            "/static/**",
+            "/static/*",
             "/*.ico",
             "/*.png",
             "/*.json",
