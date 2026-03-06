@@ -377,10 +377,12 @@ function Module2Tab() {
     const [pdfStatus, setPdfStatus] = useState(null);
     const [approveStatus, setApproveStatus] = useState(null);
 
-    const fetchRules = async () => {
+    const fetchRules = async (sourceOverride) => {
         setLoading(true);
         try {
-            const res = await fetch(`${CONFIG.FINDISTILL_BASE}/api/RuleExtractor?code=${CONFIG.RULE_EXTRACTOR_KEY}`);
+            const filename = sourceOverride || pdfName;
+            const url = `${CONFIG.FINDISTILL_BASE}/api/RuleExtractor?code=${CONFIG.RULE_EXTRACTOR_KEY}${filename ? `&source=${filename}` : ""}`;
+            const res = await fetch(url);
             const data = await res.json();
             setPendingRules(data.proposed_rules || []);
         } catch (e) { console.error(e); }

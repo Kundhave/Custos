@@ -22,8 +22,14 @@ If no rules are found, return: {"rules": []}'''
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
     query = req.params.get('query', 'daily limit trading restriction position size')
+    source = req.params.get('source')
+    
     # Retrieve relevant chunks from AI Search
-    results = sc.search(query, top=5)
+    search_kwargs = {"top": 5}
+    if source:
+        search_kwargs["filter"] = f"source eq '{source}'"
+    
+    results = sc.search(query, **search_kwargs)
     context = '\n---\n'.join([r['content'] for r in results])
     if not context.strip():
         return func.HttpResponse(
