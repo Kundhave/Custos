@@ -1,0 +1,1 @@
+{"timestamp": "2026-03-05T15:50:06.195553", "order_id": "16", "ticker": "GOOG", "size": 76779, "value": 81552957, "decision": {"status": "REJECTED", "reason": "EXCEEDS_DAILY_LIMIT"}}

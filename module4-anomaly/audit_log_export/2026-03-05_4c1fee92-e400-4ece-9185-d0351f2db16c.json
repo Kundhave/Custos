@@ -1,0 +1,1 @@
+{"timestamp": "2026-03-05T15:50:05.946072", "order_id": "10", "ticker": "TSLA", "size": 70691, "value": 84028165, "decision": {"status": "REJECTED", "reason": "EXCEEDS_DAILY_LIMIT"}}

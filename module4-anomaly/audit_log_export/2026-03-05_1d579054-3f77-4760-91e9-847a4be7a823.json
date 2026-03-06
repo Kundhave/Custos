@@ -1,0 +1,1 @@
+{"timestamp": "2026-03-05T15:50:05.923784", "order_id": "9", "ticker": "TSLA", "size": 141707, "value": 31166976, "decision": {"status": "FLAGGED", "reason": "FAT_FINGER_DETECTED"}}

@@ -1,0 +1,1 @@
+{"timestamp": "2026-03-05T15:49:59.699198", "order_id": "3", "ticker": "RESTRICTED_STOCK", "size": 125462, "value": 42024247, "decision": {"status": "REJECTED", "reason": "RESTRICTED_TICKER"}}

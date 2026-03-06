@@ -1,0 +1,1 @@
+{"timestamp": "2026-03-05T15:50:01.978026", "order_id": "10", "ticker": "AAPL", "size": 68028, "value": 81247627, "decision": {"status": "REJECTED", "reason": "EXCEEDS_DAILY_LIMIT"}}

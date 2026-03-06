@@ -1,0 +1,11 @@
+azure-functions
+azure-storage-blob
+azure-data-tables
+azure-servicebus
+azure-ai-ml
+azure-identity
+azure-monitor-opentelemetry
+scikit-learn==1.4.0
+torch==2.2.0
+pandas
+numpy

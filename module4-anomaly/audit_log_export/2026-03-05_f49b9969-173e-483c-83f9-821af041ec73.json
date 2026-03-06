@@ -1,0 +1,1 @@
+{"timestamp": "2026-03-05T15:50:06.019416", "order_id": "12", "ticker": "AAPL", "size": 199122, "value": 11718789, "decision": {"status": "FLAGGED", "reason": "FAT_FINGER_DETECTED"}}

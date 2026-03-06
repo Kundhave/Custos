@@ -1,0 +1,1 @@
+{"timestamp": "2026-03-05T15:50:17.316598", "order_id": "10", "ticker": "MSFT", "size": 150510, "value": 42206480, "decision": {"status": "FLAGGED", "reason": "FAT_FINGER_DETECTED"}}

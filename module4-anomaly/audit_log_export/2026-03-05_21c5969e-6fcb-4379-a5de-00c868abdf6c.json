@@ -1,0 +1,1 @@
+{"timestamp": "2026-03-05T08:31:52.691571", "order_id": "1", "ticker": "GOOG", "size": 102341, "value": 74512371, "decision": {"status": "FLAGGED", "reason": "FAT_FINGER_DETECTED"}}
