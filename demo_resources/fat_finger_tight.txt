@@ -1,0 +1,1 @@
+"Operational Risk Mandate: Fat-finger detection sensitivity is increased. The multiplier for order size deviation is now 2x the 30-day average for high-volume exchange trades."

@@ -1,0 +1,1 @@
+"Internal Risk Update: To reduce volatility exposure, the single-order daily limit is now lowered to 500,000 USD for all institutional clients across all sectors."

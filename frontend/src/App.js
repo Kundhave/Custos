@@ -10,6 +10,7 @@ const CONFIG = {
     PDF_INGESTION_KEY: "-p0I6Co79xS_yQOvALwebX479hFopPrH8MGIMhQsd51GAzFusiH6kQ==",
     GET_ALERTS_KEY: "01ia1q1b4JJnHZaQxdq7XLK_q2jAhcwH8gKsbf0r8lY0AzFu6or5ww==",
     RUN_DETECTOR_KEY: "yBdAiuVCEnB9OUvdkpDGklYMSdX5NDZWNobyxqIKIRZ5AzFukfLEBw==",
+    AUDIT_LOGS_SAS_URL: "https://custosblob2.blob.core.windows.net/audit-logs?sv=2024-11-04&ss=b&srt=co&sp=rltfx&se=2026-04-06T00:18:05Z&st=2026-03-05T16:03:05Z&spr=https&sig=RH%2FMMDqko7xuWT6Cm%2BAtlPkM1lk2S7w23xb4S6LJg1Y%3D",
 };
 
 // ── STYLES ──────────────────────────────────────────────────────────────────
@@ -264,39 +265,109 @@ function Clock() {
 
 // ── TAB: MODULE 1 – TRADE VALIDATOR ─────────────────────────────────────────
 function Module1Tab() {
-    const [logs, setLogs] = useState([]);
+    const [auditLogs, setAuditLogs] = useState([]);
+    const [scores, setScores] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [terminal, setTerminal] = useState([]);
 
-    const addLog = (msg, type = "info") => setTerminal(p => [...p.slice(-30), { ts: now(), msg, type }]);
-
-    const fetchLogs = useCallback(async () => {
+    const fetchData = useCallback(async () => {
         setLoading(true);
-        addLog("Fetching audit logs from custosblob2...", "info");
         try {
-            const res = await fetch(`${CONFIG.ANOMALY_BASE}/api/get-alerts?source=table&code=${CONFIG.GET_ALERTS_KEY}`);
-            const data = await res.json();
-            const scores = data.scores || [];
-            setLogs(scores.slice(0, 20));
-            addLog(`Loaded ${scores.length} trade records from Table Storage`, "ok");
+            // Fetch anomaly scores from Table Storage
+            const scoreRes = await fetch(`${CONFIG.ANOMALY_BASE}/api/get-alerts?source=table&code=${CONFIG.GET_ALERTS_KEY}`);
+            const scoreData = await scoreRes.json();
+            setScores(scoreData.scores || []);
+
+            // Fetch audit logs from blob storage via SAS URL
+            const sasBase = CONFIG.AUDIT_LOGS_SAS_URL;
+            const today = new Date().toISOString().slice(0, 10);
+            const listUrl = `${sasBase}&restype=container&comp=list&prefix=${today}`;
+            const listRes = await fetch(listUrl);
+            const listText = await listRes.text();
+
+            // Parse blob names from XML response
+            const blobNames = [];
+            const regex = /<Name>([^<]+)<\/Name>/g;
+            let match;
+            while ((match = regex.exec(listText)) !== null) {
+                blobNames.push(match[1]);
+            }
+
+            // Fetch exactly the last 22 audit logs (matches exactly 1 simulator run of 22 orders)
+            const logs = [];
+            for (const name of blobNames.slice(-22)) { // max 22
+                try {
+                    const blobUrl = `${sasBase.split('?')[0]}/${name}?${sasBase.split('?')[1]}`;
+                    const blobRes = await fetch(blobUrl);
+                    const blobData = await blobRes.json();
+                    logs.push(blobData);
+                } catch (e) { /* skip bad blobs */ }
+            }
+
+            // Sort by timestamp descending (newest first)
+            logs.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+            setAuditLogs(logs);
         } catch (e) {
-            addLog(`Error: ${e.message}`, "err");
+            console.error("Module1Tab fetch error:", e);
         }
         setLoading(false);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    useEffect(() => { fetchLogs(); }, [fetchLogs]);
+    useEffect(() => { fetchData(); }, [fetchData]);
 
-    const approved = logs.filter(l => !l.is_flagged).length;
-    const flagged = logs.filter(l => l.is_flagged).length;
+    // Auto-refresh every 15 seconds
+    useEffect(() => {
+        const id = setInterval(fetchData, 15000);
+        return () => clearInterval(id);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Merge audit logs with anomaly scores by order_id
+    const merged = auditLogs.map(log => {
+        const score = scores.find(s =>
+            (s.RowKey || '').includes(log.order_id) || (s.order_id === log.order_id)
+        );
+        return { ...log, anomaly_score: score?.anomaly_score, is_flagged: score?.is_flagged };
+    });
+
+    // Stats
+    const approved = auditLogs.filter(l => l.decision?.status === 'APPROVED').length;
+    const rejected = auditLogs.filter(l => l.decision?.status === 'REJECTED' || l.decision?.status === 'FLAGGED').length;
+    const totalOrders = auditLogs.length;
+
+    // Most violated rule
+    const violations = auditLogs
+        .filter(l => l.decision?.status === 'REJECTED')
+        .map(l => l.decision?.reason)
+        .filter(Boolean);
+    const violationCounts = {};
+    violations.forEach(v => { violationCounts[v] = (violationCounts[v] || 0) + 1; });
+    const topViolation = Object.entries(violationCounts).sort((a, b) => b[1] - a[1])[0];
 
     return (
         <div>
             <div className="module-tag">MODULE 01 — TRADE VALIDATOR</div>
+
+            {/* Summary Banner */}
+            {totalOrders > 0 && (
+                <div className="advisory" style={{ background: "rgba(0,212,255,0.04)", borderColor: "var(--border2)", marginBottom: 16 }}>
+                    <span style={{ color: "var(--cyan)" }}>
+                        Last batch: <strong>{totalOrders}</strong> orders ·{" "}
+                        <span style={{ color: "var(--green)" }}>{approved} APPROVED</span> ·{" "}
+                        <span style={{ color: "var(--red)" }}>{rejected} REJECTED</span>
+                        {topViolation && (
+                            <span style={{ color: "var(--amber)", marginLeft: 12 }}>
+                                Most violated: {topViolation[0]} ({topViolation[1]}×)
+                            </span>
+                        )}
+                    </span>
+                </div>
+            )}
+
             <div className="stat-grid">
                 <div className="stat-card cyan">
-                    <div className="stat-label">TOTAL SCORED</div>
-                    <div className="stat-value cyan">{logs.length}</div>
+                    <div className="stat-label">TOTAL ORDERS</div>
+                    <div className="stat-value cyan">{totalOrders}</div>
                     <div className="stat-sub">Today's window</div>
                 </div>
                 <div className="stat-card green">
@@ -305,60 +376,81 @@ function Module1Tab() {
                     <div className="stat-sub">Clean trades</div>
                 </div>
                 <div className="stat-card red">
-                    <div className="stat-label">FLAGGED</div>
-                    <div className="stat-value red">{flagged}</div>
-                    <div className="stat-sub">Anomalous</div>
+                    <div className="stat-label">REJECTED</div>
+                    <div className="stat-value red">{rejected}</div>
+                    <div className="stat-sub">Rule violations</div>
                 </div>
                 <div className="stat-card amber">
-                    <div className="stat-label">FLAG RATE</div>
-                    <div className="stat-value amber">{logs.length ? pct(flagged / logs.length) : "0.0%"}</div>
-                    <div className="stat-sub">Advisory only</div>
+                    <div className="stat-label">REJECT RATE</div>
+                    <div className="stat-value amber">{totalOrders ? pct(rejected / totalOrders) : "0.0%"}</div>
+                    <div className="stat-sub">Today</div>
                 </div>
             </div>
 
             <div className="grid-2">
                 <div className="card">
                     <div className="card-header">
-                        <span className="card-title">SCORED TRADES — TABLE STORAGE</span>
-                        <button className="btn btn-cyan btn-sm" onClick={fetchLogs}>↺ REFRESH</button>
+                        <span className="card-title">TRADE DECISIONS — AUDIT LOG</span>
+                        <button className="btn btn-cyan btn-sm" onClick={fetchData}>↺ REFRESH</button>
                     </div>
                     <div className="card-body" style={{ padding: 0 }}>
                         {loading ? <div className="loading"><div className="spinner" /> FETCHING...</div> :
-                            logs.length === 0 ? <div className="empty"><div className="empty-icon">◈</div>No records yet — run simulator.py</div> :
+                            merged.length === 0 ? <div className="empty"><div className="empty-icon">◈</div>No records yet — run simulator.py</div> :
                                 <table className="data-table">
-                                    <thead><tr><th>ORDER ID</th><th>TICKER</th><th>SCORE</th><th>STATUS</th></tr></thead>
+                                    <thead><tr><th>ORDER ID</th><th>TICKER</th><th>VALUE</th><th>STATUS</th><th>REASON</th></tr></thead>
                                     <tbody>
-                                        {logs.slice(0, 12).map((l, i) => (
-                                            <tr key={i}>
-                                                <td style={{ color: "var(--text-dim)", fontSize: 10 }}>{String(l.RowKey || "—").slice(0, 12)}...</td>
-                                                <td style={{ color: "var(--cyan)", fontFamily: "var(--font-head)" }}>{l.ticker || "—"}</td>
-                                                <td>
-                                                    <div style={{ color: scoreBarColor(l.anomaly_score || 0) }}>
-                                                        {(l.anomaly_score || 0).toFixed(3)}
-                                                    </div>
-                                                    <div className="score-bar-bg">
-                                                        <div className="score-bar-fill" style={{ width: pct(l.anomaly_score || 0), background: scoreBarColor(l.anomaly_score || 0) }} />
-                                                    </div>
-                                                </td>
-                                                <td><span className={`badge ${l.is_flagged ? "badge-red" : "badge-green"}`}>{l.is_flagged ? "FLAGGED" : "CLEAN"}</span></td>
-                                            </tr>
-                                        ))}
+                                        {merged.slice(0, 15).map((l, i) => {
+                                            const status = l.decision?.status || "—";
+                                            const isRejected = status === "REJECTED" || status === "FLAGGED";
+                                            return (
+                                                <tr key={i}>
+                                                    <td style={{ color: "var(--text-dim)", fontSize: 10 }}>{String(l.order_id || "—").slice(0, 16)}</td>
+                                                    <td style={{ color: "var(--cyan)", fontFamily: "var(--font-head)" }}>{l.ticker || "—"}</td>
+                                                    <td style={{ fontFamily: "var(--font-mono)", fontSize: 11 }}>${fmt(l.value || 0)}</td>
+                                                    <td>
+                                                        <span className={`badge ${isRejected ? "badge-red" : "badge-green"}`}>
+                                                            {status}
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ fontSize: 10, maxWidth: 220 }}>
+                                                        {isRejected ? (
+                                                            <span style={{ color: "var(--red)" }}>✗ {l.rejection_reason || l.decision?.reason || "—"}</span>
+                                                        ) : (
+                                                            <span style={{ color: "var(--green)" }}>✓ PASSED</span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>}
                     </div>
                 </div>
 
                 <div className="card">
-                    <div className="card-header"><span className="card-title">SYSTEM LOG</span></div>
+                    <div className="card-header"><span className="card-title">RECENT ACTIVITY FEED</span></div>
                     <div className="card-body" style={{ padding: 0 }}>
-                        <div className="terminal">
-                            {terminal.length === 0 && <div className="terminal-line"><span className="info">CUSTOS TradeValidator v1.0 — Ready</span></div>}
-                            {terminal.map((l, i) => (
-                                <div key={i} className="terminal-line">
-                                    <span className="ts">[{l.ts}]</span>
-                                    <span className={l.type}>{l.msg}</span>
-                                </div>
-                            ))}
+                        <div className="terminal" style={{ maxHeight: 380 }}>
+                            {auditLogs.length === 0 && <div className="terminal-line"><span className="info">CUSTOS TradeValidator v1.0 — Awaiting orders...</span></div>}
+                            {auditLogs.slice(0, 15).map((l, i) => {
+                                const time = l.timestamp ? l.timestamp.split('T')[1]?.slice(0, 8) : "--:--:--";
+                                const status = l.decision?.status || "—";
+                                const isRejected = status === "REJECTED" || status === "FLAGGED";
+                                const valStr = l.value ? `$${(l.value / 1e6).toFixed(1)}M` : "$0";
+                                return (
+                                    <div key={i} className="terminal-line">
+                                        <span className="ts">[{time}]</span>
+                                        <span className={isRejected ? "err" : "ok"}>
+                                            {isRejected ? "✗" : "✓"} {(l.ticker || "—").padEnd(8)} {valStr.padEnd(10)} {status}
+                                        </span>
+                                        {isRejected && l.rejection_reason && (
+                                            <span style={{ color: "var(--text-dim)", marginLeft: 4, fontSize: 10 }}>
+                                                — {l.decision?.reason}
+                                            </span>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 </div>
@@ -377,20 +469,6 @@ function Module2Tab() {
     const [pdfStatus, setPdfStatus] = useState(null);
     const [approveStatus, setApproveStatus] = useState(null);
 
-    const fetchRules = async (sourceOverride) => {
-        setLoading(true);
-        try {
-            const filename = sourceOverride || pdfName;
-            const url = `${CONFIG.FINDISTILL_BASE}/api/RuleExtractor?code=${CONFIG.RULE_EXTRACTOR_KEY}${filename ? `&source=${filename}` : ""}`;
-            const res = await fetch(url);
-            const data = await res.json();
-            setPendingRules(data.proposed_rules || []);
-        } catch (e) { console.error(e); }
-        setLoading(false);
-    };
-
-    useEffect(() => { fetchRules(); }, []);
-
     const approveRules = async () => {
         setLoading(true);
         try {
@@ -401,7 +479,15 @@ function Module2Tab() {
             });
             const data = await res.json();
             setApproveStatus(data);
-            setRules(pendingRules);
+
+            // Merge newly approved rules with existing rules, keeping newest
+            setRules(prev => {
+                const map = new Map();
+                prev.forEach(r => map.set(r.key, r));
+                pendingRules.forEach(r => map.set(r.key, r));
+                return Array.from(map.values());
+            });
+            setPendingRules([]);
         } catch (e) { console.error(e); }
         setLoading(false);
     };
@@ -409,16 +495,41 @@ function Module2Tab() {
     const uploadPdf = async () => {
         if (!pdfFile) return;
         setLoading(true);
+        setPendingRules([]);
+        setApproveStatus(null);
+        setPdfStatus(null);
         try {
             const res = await fetch(
                 `${CONFIG.FINDISTILL_BASE}/api/PDFIngestion?filename=${pdfName}&code=${CONFIG.PDF_INGESTION_KEY}`,
                 { method: "POST", headers: { "Content-Type": "application/pdf" }, body: pdfFile }
             );
             const data = await res.json();
+            console.log("PDFIngestion full response:", JSON.stringify(data, null, 2));
             setPdfStatus(data);
-        } catch (e) { console.error(e); }
+
+            if (data.proposed_rules && data.proposed_rules.length > 0) {
+                // Deduplicate by key — keep last occurrence
+                const map = new Map();
+                data.proposed_rules.forEach(r => map.set(r.key, r));
+                setPendingRules(Array.from(map.values()));
+            }
+        } catch (e) { console.error("PDFIngestion fetch error:", e); }
         setLoading(false);
     };
+
+    // Build a human‑readable status from the _debug field
+    const debugLine = pdfStatus?._debug ? (() => {
+        const d = pdfStatus._debug;
+        const parts = [];
+        parts.push(`${d.pages_in_pdf || 0} pages`);
+        parts.push(`${d.pdf_text_length || 0} chars extracted`);
+        parts.push(`${d.indexed_count || 0} indexed`);
+        if (d.groq_called) {
+            parts.push(`Groq: ${d.rules_before_dedup || 0} raw → ${d.rules_after_dedup || 0} deduped`);
+        }
+        if (d.groq_error) parts.push(`⚠ ${d.groq_error}`);
+        return parts.join(" · ");
+    })() : null;
 
     return (
         <div>
@@ -427,19 +538,31 @@ function Module2Tab() {
                 <div>
                     <div className="card">
                         <div className="card-header">
-                            <span className="card-title">PROPOSED RULES — RULEEXTRACTOR</span>
-                            <button className="btn btn-cyan btn-sm" onClick={fetchRules}>↺ EXTRACT</button>
+                            <span className="card-title">PROPOSED RULES FROM LAST INGESTION</span>
                         </div>
                         <div className="card-body">
-                            {loading ? <div className="loading"><div className="spinner" />EXTRACTING...</div> :
-                                pendingRules.length === 0 ? <div className="empty"><div className="empty-icon">⊡</div>No rules extracted</div> :
+                            {loading ? <div className="loading"><div className="spinner" />INGESTING & EXTRACTING...</div> :
+                                pendingRules.length === 0 ?
+                                    <div className="empty">
+                                        <div className="empty-icon">⊡</div>
+                                        {pdfStatus && pdfStatus.status === "ok"
+                                            ? "No rules found in this PDF"
+                                            : "No rules pending — ingest a PDF to extract rules"}
+                                    </div> :
                                     pendingRules.map((r, i) => (
-                                        <div key={i} className="rule-item">
-                                            <div>
-                                                <div className="rule-key">{r.key}</div>
-                                                <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 2 }}>Proposed value</div>
+                                        <div key={i} className="rule-item" style={{ flexDirection: "column", alignItems: "stretch" }}>
+                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                <div>
+                                                    <div className="rule-key">{r.key}</div>
+                                                    <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 2 }}>Proposed value</div>
+                                                </div>
+                                                <div className="rule-val">{fmt(r.value)}</div>
                                             </div>
-                                            <div className="rule-val">{fmt(r.value)}</div>
+                                            {r.source_quote && (
+                                                <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 6, padding: "6px 8px", background: "var(--bg)", borderRadius: 3, fontFamily: "var(--font-mono)", fontStyle: "italic", borderLeft: "2px solid var(--cyan-dim)" }}>
+                                                    "{r.source_quote}"
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                             {pendingRules.length > 0 && (
@@ -469,12 +592,13 @@ function Module2Tab() {
                                 <input type="file" accept=".pdf" onChange={e => setPdfFile(e.target.files[0])}
                                     style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--text)", background: "var(--bg3)", border: "1px solid var(--border2)", padding: "8px", borderRadius: 4, width: "100%" }} />
                             </div>
-                            <button className="btn btn-cyan" style={{ width: "100%" }} onClick={uploadPdf} disabled={!pdfFile || !pdfName}>
-                                ↑ INGEST PDF TO AZURE AI SEARCH
+                            <button className="btn btn-cyan" style={{ width: "100%" }} onClick={uploadPdf} disabled={!pdfFile || !pdfName || loading}>
+                                {loading ? "⏳ INGESTING & EXTRACTING..." : "↑ INGEST PDF & EXTRACT RULES"}
                             </button>
                             {pdfStatus && (
                                 <div style={{ marginTop: 12, padding: "10px", background: "rgba(0,212,255,0.05)", border: "1px solid var(--cyan-dim)", borderRadius: 4, fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--cyan)" }}>
-                                    ✓ Status: {pdfStatus.status} — Pages indexed: {pdfStatus.pages_indexed}
+                                    ✓ {pdfStatus.filename || pdfName} — Pages: {pdfStatus.pages_indexed} — Rules: {pdfStatus.proposed_rules?.length || 0}
+                                    {debugLine && <div style={{ marginTop: 4, fontSize: 10, color: "var(--text-dim)" }}>{debugLine}</div>}
                                 </div>
                             )}
                         </div>
@@ -484,7 +608,7 @@ function Module2Tab() {
                         <div className="card-header"><span className="card-title">ACTIVE REDIS RULES</span></div>
                         <div className="card-body">
                             {rules.length === 0 ?
-                                <div className="empty"><div className="empty-icon">⊟</div>Extract and approve rules to populate</div> :
+                                <div className="empty"><div className="empty-icon">⊟</div>No active rules — ingest and approve PDFs to populate</div> :
                                 rules.map((r, i) => (
                                     <div key={i} className="rule-item">
                                         <div className="rule-key">{r.key}</div>
