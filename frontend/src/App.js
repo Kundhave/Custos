@@ -1,18 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 
 // ── CONFIG ──────────────────────────────────────────────────────────────────
-const CONFIG = {
-    VALIDATOR_BASE: "https://custos-validator-fn-k-fqf4fhf4fqaqd8dq.centralindia-01.azurewebsites.net",
-    FINDISTILL_BASE: "https://custos-findistill-fn-c8atg8edhagncaf7.centralindia-01.azurewebsites.net",
-    ANOMALY_BASE: "https://custos-anomaly-fn-aac2a0hsakdwd5gr.centralindia-01.azurewebsites.net",
-    RULE_EXTRACTOR_KEY: "xv4MPQ7ftisuJjtpP75P7lbSMavRaz9a9WnfmyKRxWwqAzFuYGsPkA==",
-    APPROVE_RULES_KEY: "XWmg9wiXe7cF-xCc-qiKZuFVLSTYrBdeTbTH5EiS_5WWAzFuGIrvow==",
-    PDF_INGESTION_KEY: "-p0I6Co79xS_yQOvALwebX479hFopPrH8MGIMhQsd51GAzFusiH6kQ==",
-    GET_ALERTS_KEY: "01ia1q1b4JJnHZaQxdq7XLK_q2jAhcwH8gKsbf0r8lY0AzFu6or5ww==",
-    RUN_DETECTOR_KEY: "yBdAiuVCEnB9OUvdkpDGklYMSdX5NDZWNobyxqIKIRZ5AzFukfLEBw==",
-    AUDIT_LOGS_SAS_URL: "https://custosblob2.blob.core.windows.net/audit-logs?sv=2024-11-04&ss=b&srt=co&sp=rltfx&se=2026-04-06T00:18:05Z&st=2026-03-05T16:03:05Z&spr=https&sig=RH%2FMMDqko7xuWT6Cm%2BAtlPkM1lk2S7w23xb4S6LJg1Y%3D",
-};
-
 // ── STYLES ──────────────────────────────────────────────────────────────────
 const styles = `
   @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;700;900&display=swap');
