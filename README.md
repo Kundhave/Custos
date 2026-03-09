@@ -35,10 +35,10 @@ All four modules were fully deployed on Microsoft Azure with a live React dashbo
 
 <img width="891" height="375" alt="image" src="https://github.com/user-attachments/assets/317c2531-b53a-4998-a457-f2d4417f1e7f" />
 
-<img width="1365" height="681" alt="image" src="https://github.com/user-attachments/assets/071369cb-0c06-405a-91aa-1de3d9428b4f" />
-<img width="1365" height="684" alt="image" src="https://github.com/user-attachments/assets/32bb2fb8-620b-4b73-b5e4-38e2b4d8135e" />
-<img width="1365" height="604" alt="image" src="https://github.com/user-attachments/assets/ab8f2f3c-52f0-4b66-86b9-8fdf15d6d693" />
-<img width="1353" height="675" alt="image" src="https://github.com/user-attachments/assets/f6d24989-8d5b-4720-996e-e68a2a811e0a" />
+<img width="1365" height="675" alt="image" src="https://github.com/user-attachments/assets/a7a8835f-6064-49dd-9f2a-01a05dc725a9" />
+<img width="1365" height="680" alt="image" src="https://github.com/user-attachments/assets/a327d35e-cc2c-49a0-a925-709f84bb9863" />
+<img width="1364" height="607" alt="image" src="https://github.com/user-attachments/assets/a6890f5b-b810-476e-b091-be9ce40cd67d" />
+<img width="1365" height="680" alt="image" src="https://github.com/user-attachments/assets/82001f31-1147-40a2-9d34-e858350af6dd" />
 
 ### Deployed Resources (deprovisioned post-demo)
 
