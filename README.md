@@ -30,10 +30,15 @@ All four modules were fully deployed on Microsoft Azure with a live React dashbo
 ## Live Deployment
 
 > **Note:** Azure resources have been deprovisioned after project completion due to student subscription cost management. All infrastructure was fully operational during development and demonstration.
-Link: https://delightful-coast-002ae4800.6.azurestaticapps.net
+
 <img width="906" height="442" alt="image" src="https://github.com/user-attachments/assets/224d0b1b-e70e-4e37-bff9-e1f8f9212561" />
 
 <img width="891" height="375" alt="image" src="https://github.com/user-attachments/assets/317c2531-b53a-4998-a457-f2d4417f1e7f" />
+
+<img width="1365" height="681" alt="image" src="https://github.com/user-attachments/assets/071369cb-0c06-405a-91aa-1de3d9428b4f" />
+<img width="1365" height="684" alt="image" src="https://github.com/user-attachments/assets/32bb2fb8-620b-4b73-b5e4-38e2b4d8135e" />
+<img width="1365" height="604" alt="image" src="https://github.com/user-attachments/assets/ab8f2f3c-52f0-4b66-86b9-8fdf15d6d693" />
+<img width="1353" height="675" alt="image" src="https://github.com/user-attachments/assets/f6d24989-8d5b-4720-996e-e68a2a811e0a" />
 
 ### Deployed Resources (deprovisioned post-demo)
 
