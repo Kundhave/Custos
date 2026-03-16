@@ -23,7 +23,7 @@ The platform operates across four tightly integrated modules:
 3. **Audit Log** — ensures every trade decision is permanently tamper-proof using WORM immutability
 4. **Anomaly Detection** — continuously scores trade patterns using two ML models to flag suspicious behavior
 
-All four modules were fully deployed on Microsoft Azure with a live React dashboard hosted on Azure Static Web Apps.
+All four modules were fully deployed on Microsoft Azure with a live link on Azure Static Web Apps.
 
 ---
 
