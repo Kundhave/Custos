@@ -1,5 +1,5 @@
 # CUSTOS
-### Pre-Trade Risk & Regulatory Intelligence Platform
+### Pre-Trade Risk & Regulatory Intelligence Platform - Deployed on Azure Static Web Apps
 
 > *Real-time trade validation, AI-powered regulatory rule extraction, immutable audit logging, and ML anomaly detection — fully deployed on Microsoft Azure.*
 
